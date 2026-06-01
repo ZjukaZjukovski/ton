@@ -1,0 +1,110 @@
+# TON security bug bounty
+
+If you find a critical bug or vulnerability in the TON Blockchain (in the C++ code of the main repository) or TON main services (standard wallets, standard smart contracts), you can send its description and exploitation scenario and receive a reward.
+
+We are interested in critical vulnerabilities: crash, loss/theft of coins, etc.
+
+You can target a reward of up to $100,000 in Toncoins for vulnerability, depending on the severity; large bounties for severe vulnerabilities are given with 1 year lock-up.
+
+Let's perfect the safety and security of TON together!
+
+Send general reports to [@ton_bugs_bot](https://t.me/ton_bugs_bot). Reports about frontend should be sent to [hackenproof page](https://hackenproof.com/programs/ton-society) (check Frontend section below).
+
+_We reserve the right not to review some reports._
+
+## Out of scope / not accepted cases
+
+The following are generally out of scope or will not be accepted without a clear escalation to a real security impact on normal network/service operation:
+
+- Issues that require the attacker to already control the local host, local files/libraries, runtime parameters, environment variables, startup flags, or other trusted operator inputs.
+- Issues that require the attacker to already control majority of honest validators, including issues related to malformed blocks signed by the quorum, incorrect network config parameters (require validators voting for them to be accepted). Often under such conditions errors cause CHECK() and node crash: this is intended behavior, where under malfunctioning quorum it is better to halt rather then continue operation.
+- Issues that require the attacker to know leaked private information: private key for different public keys (like ADNL, wallets, block signing keys), keys for control-interface, FullNodeMaster, etc
+- General advices on how to write blockchains, smartcontracts or complaints that TON has it's own peculiarities that require different approach then bitcoin, ethereum, etc
+- Client-side SDK misuse by the integrating application, including loading attacker-controlled local code/data, when no privilege boundary is crossed.
+- Reports against components not listed below, or against stubs / preliminary-testing implementations / deprecated components not intended for production use.
+- Input-validation, error-message, or status-code hygiene issues (for example 5xx vs 4xx/405) when the service remains healthy.
+- Crashes or odd behavior in local tools, debug-only paths, or other user-side workflows that do not affect normal node/service/blockchain operation.
+- Behavior with no realistic manifestation or exploitation path in normal network operation.
+- Long-known implementation or design peculiarities, unless you demonstrate a new security impact.
+- Issues related to misbehaving validator ability to force other validators to do useless work: validate and/or re-broadcast incorrect candidates.
+- Issues related to future timestamps not fitting corresponding uints, including 2038/2106 years problems
+- Sybil attack for public overlay
+- TON-ETH, TON-BSC and TON-Eth-token bridges are [deprecated](https://t.me/tonstatus/215) and are out of the scope now.
+
+# Priority list:
+
+## TON Blockchain Core (C++)
+
+https://github.com/ton-blockchain/ton.
+
+Simplex, ~Catchain,~ Validator Node, Full Node, DHT Node, TonLib, ~FunC compiler, Fift compiler~ **(issues in **FunC** and **Fift** that do not cause critical problems during normal node operation are no longer in scope for this bug bounty)**. 
+
+The testnet branch is considered experimental and often undergoes tests and audits. We are interested in identifying problems at this stage, thus bugs in the testnet branch are accepted, in some cases report review maybe postponed till the end of audit/tests (you will be immediately notified upon report submission).
+
+*Extracurrency* related bugs are considered but has low priority in terms of processing speed and bounty rewards, due to not being practically deployed on mainnet (with not firm plans about them).
+
+*MisbehaviorProof* absence in Simplex is known and is a low-priority work-in-progress. It is not critical part for current Simplex operation and expected to be implemented as defence-in-depth. Reports about MisbehaviorProof are not accepted.
+
+Reports about TVM issues, in particular "crash due to some OPCODE usage", "exponential CPU/Mem load over linear gas usage", "gas undercharging" and everything else related to Computation Phase execution strictly requires PoC in Fift, reports without such PoC will be instantaneously rejected. Use [TVM Fift Hypothesis Proover](https://github.com/ton-blockchain/ton-triage-skill/tree/main/tvm-fift-hypothesis-proving) skill to craft such PoCs. Reports related to DEBUG opcodes are out of scope. Only reports for latest `global_version` are accepted.
+
+Explicitly out-of-scope:
+- issues related to non-final LS
+- issues related to Ton Storage and rldp-http-proxy
+- issues related to blockchain explorer (C++ based from monorepo)
+- issues related to incorrect configuration of validator control interface
+- ability to crash libemulator by supplying incorrect data
+
+
+## Smart Contracts (FunC)
+
+Standard smart contracts - https://github.com/ton-blockchain/ton/tree/master/crypto/smartcont:
+
+- Network config - `config-code.fc`;
+  - Known peculiarities of Config contract is that if validator voted positively for some proposal his vote (under specific conditions) can be replayed in different rounds without active validator participation.
+
+- Elector - `elector-code.fc`;
+  - Known peculiarities of Elector are not bounty issues by themselves, including `max_stake`-related stake accounting/recovery behavior and ignoring bounce messages semantics. Also reports for elector-code issues should take into account that `election_id` is different each round, thus signatures for slashing fines can not be replayed.
+
+- Wallets - `simple-wallet-code.fc`, `wallet3-code.fc`;
+  - Deleted-wallet redeploy/reuse behavior by itself is not considered a vulnerability; wallet deletion should be treated as final, and old externals are expected to expire via short `valid_until`.
+- other smart contracts in `crypto/smartcont/` are usually considered smart contract examples and are generally out of scope.
+
+Wallet V4 and subscription smart contracts - https://github.com/ton-blockchain/wallet-contract. Wallet plugins (for all versions) are provided as examples and are out of the scope.
+
+Multisig - https://github.com/ton-blockchain/multisig-contract
+
+Nominator pool - https://github.com/ton-blockchain/nominator-pool .
+For nominator pool 2 frequently arising reports are not considered as issues: [Stake withdrawal for low nominator stakes](https://github.com/ton-blockchain/nominator-pool/issues/15), [Stake withdrawal in anticipation of slashing losses may shift losses to other nominators](https://github.com/ton-blockchain/nominator-pool/issues/14)
+
+Fungible, Non-Fungible, Semi-Fungible tokens - https://github.com/ton-blockchain/token-contract . Note that sale, ICO, and other supplementary contracts are provided as examples only and should not be considered reference implementations. Issues in those contracts are out of scope.
+
+TON DNS - https://github.com/ton-blockchain/dns-contract
+
+## Python
+
+MyTonCtrl validator tools - https://github.com/ton-blockchain/mytonctrl.
+
+HTTP API - https://github.com/toncenter/ton-http-api, https://toncenter.com.
+
+Python SDK - https://github.com/toncenter/pytonlib.
+
+## Frontend
+
+All issues related to sites and frontend should be sent to [hackenproof page](https://hackenproof.com/programs/ton-society).
+
+Note that the standard recommendations from the OWASP (e.g. adding the recommended HTTP headers) will not be highly appreciated or will rejected.
+
+The most valuable are real vulnerabilities and critical bugs.
+
+We do not accept reports about open IP addresses or open ports, if this does not lead to an attack (ddos is not considered in this case).
+
+Web Site - https://ton.org.
+
+
+## Third-party
+
+Third-party TON services that you can find for example on https://ton.app are also interested in finding security bugs.
+
+In particular, popular products like https://tonkeeper.com, [@wallet](https://t.me/wallet), [@cryptobot](https://t.me/cryptobot), [@donate](https://t.me/donate), https://tonwhales.com, https://getgems.io,  https://disintar.io/, https://tonscan.org.
+
+Please contact them directly if you find a vulnerability.

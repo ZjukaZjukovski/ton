@@ -1,0 +1,36 @@
+--- a/dht/dht-types.cpp
++++ b/dht/dht-types.cpp
+@@ -19,6 +19,11 @@
+ #include <map>
+
+ #include "auto/tl/ton_api.hpp"
++// INSTRUMENTATION: atomic counter to prove double-call bug
++#include <atomic>
++#include <chrono>
++static std::atomic<uint64_t> g_check_value_calls{0};
++static std::atomic<uint64_t> g_check_value_ed25519_ops{0};
+ #include "keys/encryptor.h"
+ #include "td/utils/Random.h"
+ #include "td/utils/overloaded.h"
+@@ -282,6 +287,11 @@ td::Status DhtUpdateRuleOverlayNodes::check_value(const DhtValue &value) {
++  // INSTRUMENTATION: log every call with caller info
++  auto call_id = ++g_check_value_calls;
++  auto t0 = std::chrono::steady_clock::now();
++  LOG(WARNING) << "[INSTR] check_value_overlayNodes ENTER call#" << call_id;
++  auto _guard = td::ScopeExit([&, call_id, t0]() {
++    auto dt = std::chrono::duration_cast<std::chrono::microseconds>(
++        std::chrono::steady_clock::now() - t0).count();
++    LOG(WARNING) << "[INSTR] check_value_overlayNodes EXIT  call#" << call_id
++                 << " dt=" << dt << "us"
++                 << " total_calls=" << g_check_value_calls.load()
++                 << " total_ed25519_ops=" << g_check_value_ed25519_ops.load();
++  });
++
+   if (value.value().size() > DhtValue::max_value_size()) {
+@@ -297,6 +307,8 @@ td::Status DhtUpdateRuleOverlayNodes::check_value(const DhtValue &value) {
+     auto B = serialize_tl_object(obj, true);
+     TRY_RESULT(E, pub.pubkey().create_encryptor());
++    // INSTRUMENTATION: count Ed25519 operations
++    ++g_check_value_ed25519_ops;
+     TRY_STATUS(E->check_signature(B.as_slice(), sig.as_slice()));
+   }
